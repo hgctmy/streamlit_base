@@ -136,8 +136,8 @@ def click1(i):
         ],
         temperature=0,
     )
-    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content[4:])
-    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content[4:])
+    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content)
+    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content)
     st.session_state.past.append(st.session_state.question[i])
 
     if len(st.session_state.past) > 3:
@@ -192,8 +192,8 @@ def on_change():
         ],
         temperature=0,
     )
-    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content[4:])
-    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content[4:])
+    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content)
+    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content)
     st.session_state.past.append(st.session_state.question[i])
     if len(st.session_state.past) > 4:
         st.session_state.end = 1
@@ -250,7 +250,7 @@ def end_fn():
 
 def finish():
     ws = st.session_state.workbook.add_worksheet('対話履歴', rows=100, cols=26)
-    ws.append_rows(st.session_state.dialog)
+    ws.append_row(st.session_state.dialog)
     st.session_state.workbook.share('hgctomo@gmail.com', perm_type='user', role='writer')
     st.session_state.past = ['start']
     st.session_state.generated = []
