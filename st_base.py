@@ -3,9 +3,6 @@ import streamlit as st
 from openai import OpenAI
 from streamlit_chat import message
 import re
-import os
-from os.path import join, dirname
-from dotenv import load_dotenv
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -15,10 +12,8 @@ credentials = Credentials.from_service_account_file("crafty-student-389707-527f8
 gc = gspread.authorize(credentials)
 
 
-load_dotenv(join(dirname(__file__), '.env'))
-
 client = OpenAI(
-    api_key=os.environ.get("API_KEY"),
+    api_key=st.secrets.OpenAIAPI.openai_api_key,
 )
 
 
