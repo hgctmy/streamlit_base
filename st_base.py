@@ -13,7 +13,7 @@ with conn.session as s:
     s.execute("CREATE TABLE IF NOT EXISTS gpt4 (input TEXT, output TEXT);")
     s.execute("INSERT INTO gpt4 (input, output) VALUES ('testinput', 'testoutput');")
     s.commit()
-pet_owners = conn.query("select input,output from gpt4;", ttl=timedelta(minutes=10))
+pet_owners = conn.query("select input,output from gpt4;", ttl=100)
 st.markdown(pet_owners)
 
 service_account_key = json.loads(st.secrets.GoogleKey.json_key)
