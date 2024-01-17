@@ -12,6 +12,7 @@ conn = st.connection('gpt4_db', type='sql')
 with conn.session as s:
     s.execute("CREATE TABLE IF NOT EXISTS gpt4 (input TEXT, output TEXT);")
     s.execute("INSERT INTO gpt4 (input, output) VALUES ('testinput', 'testoutput');")
+    s.execute("DELETE FROM gpt4;")
     s.commit()
 pet_owners = conn.query("select input,output from gpt4;", ttl=100)
 st.markdown(pet_owners)
