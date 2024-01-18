@@ -8,16 +8,13 @@ from google.oauth2.service_account import Credentials
 import json
 
 
-conn = st.connection('gpt4_db', type='sql')
-with conn.session as s:
-    s.execute("CREATE TABLE IF NOT EXISTS gpt4 (input TEXT, output TEXT);")
-    s.commit()
-
 service_account_key = json.loads(st.secrets.GoogleKey.json_key)
 credentials = Credentials.from_service_account_info(service_account_key)
 scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'])
 gc = gspread.authorize(scoped_credentials)
 
+spreadsheet_url = "https://docs.google.com/spreadsheets/d/1jDCyIjlSXju3bXy-eF3go5xYmPTyhONTrrLJQVW2lvU/edit#gid=0"
+sh1 = gc.open_by_url(spreadsheet_url)
 
 client = OpenAI(
     api_key=st.secrets.OpenAIAPI.openai_api_key,
@@ -39,6 +36,7 @@ st.session_state.setdefault('end', False)
 st.session_state.setdefault('user_input', "")
 st.session_state.setdefault('worker', "")
 st.session_state.setdefault('workbook', None)
+st.session_state.setdefault('db', sh1.get_worksheet(0))
 
 
 st.title("ニュース解説対話型インタフェース1")
@@ -64,12 +62,9 @@ def first():
         {"role": "system", "content": "あなたは便利なアシスタントです．必要に応じて以下の文章を参照して簡潔に答えてください．\n\n###文章###\n" + st.session_state.exampletexts},
         {"role": "user", "content": "まずは文章の導入部分を1文で簡単に述べてください．"}
     ]
-    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    st.dataframe(output)
-    if not (output.empty):
-        a1message = output.item()
-        st.markdown(a1message)
-        st.dataframe(output)
+    cell = st.session_state.db.find(str(st.session_state.assistant1))
+    if cell:
+        a1message = st.session_state.db.cell(cell.row, cell.col + 1).value
     else:
         completion1 = client.chat.completions.create(
             model="gpt-4",
@@ -77,9 +72,7 @@ def first():
             temperature=0
         )
         a1message = completion1.choices[0].message.content
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1).replace("'", "\"") + "', '" + a1message + "');")
-            s.commit()
+        st.session_state.db.append_row([str(st.session_state.assistant1), a1message])
     st.session_state.assistant1.append({"role": "system", "content": a1message})
     st.session_state.dialog.append("解説者：" + a1message)
 
@@ -96,18 +89,16 @@ def first():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if not (output.empty):
-        st.session_state.question = re.findall(r". (.*)", output)
+    cell = st.session_state.db.find(str(message))
+    if cell:
+        st.session_state.question = re.findall(r". (.*)", st.session_state.db.cell(cell.row, cell.col + 1).value)
     else:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=message,
             temperature=0,
         )
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message).replace("'", "\"") + "', '" + response.choices[0].message.content + "');")
-            s.commit()
+        st.session_state.db.append_row([str(message), response.choices[0].message.content])
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.generated.append(a1message)
 
@@ -140,9 +131,9 @@ def click1(i):
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if not (output.empty):
-        answer = output
+    cell = st.session_state.db.find(str(st.session_state.assistant1))
+    if cell:
+        answer = st.session_state.db.cell(cell.row, cell.col + 1).value
     else:
         completion = client.chat.completions.create(
             model="gpt-4",
@@ -150,10 +141,7 @@ def click1(i):
             temperature=0
         )
         answer = completion.choices[0].message.content
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1).replace("'", "\"") + "', '" + answer + "');")
-            s.commit()
-
+        st.session_state.db.append_row([str(st.session_state.assistant1), answer])
     st.session_state.dialog.append("解説者：" + answer)
     # 追加情報
     with open('prompt_add.txt') as f:
@@ -168,9 +156,9 @@ def click1(i):
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    outputadd = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if not (output.empty):
-        add = outputadd
+    cell = st.session_state.db.find(str(message))
+    if cell:
+        add = st.session_state.db.cell(cell.row, cell.col + 1).value
     else:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -178,9 +166,7 @@ def click1(i):
             temperature=0,
         )
         add = response.choices[0].message.content
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message).replace("'", "\"") + "', '" + add + "');")
-            s.commit()
+        st.session_state.db.append_row([str(message), add])
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
     st.session_state.assistant1.append({"role": "system", "content": answer})
@@ -201,18 +187,16 @@ def click1(i):
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if not (output.empty):
-        st.session_state.question = re.findall(r". (.*)", output)
+    cell = st.session_state.db.find(str(message))
+    if cell:
+        st.session_state.question = re.findall(r". (.*)", st.session_state.db.cell(cell.row, cell.col + 1).value)
     else:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=message,
             temperature=0,
         )
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message).replace("'", "\"") + "', '" + response.choices[0].message.content + "');")
-            s.commit()
+        st.session_state.db.append_row([str(message), response.choices[0].message.content])
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
 
 
@@ -225,9 +209,9 @@ def on_change():
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if not (output.empty):
-        answer = output
+    cell = st.session_state.db.find(str(st.session_state.assistant1))
+    if cell:
+        answer = st.session_state.db.cell(cell.row, cell.col + 1).value
     else:
         completion = client.chat.completions.create(
             model="gpt-4",
@@ -235,9 +219,7 @@ def on_change():
             temperature=0
         )
         answer = completion.choices[0].message.content
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1).replace("'", "\"") + "', '" + answer + "');")
-            s.commit()
+        st.session_state.db.append_row([str(st.session_state.assistant1), answer])
 
     st.session_state.dialog.append("解説者：" + answer)
     # 追加情報
@@ -253,9 +235,9 @@ def on_change():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    outputadd = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if not (output.empty):
-        add = outputadd
+    cell = st.session_state.db.find(str(message))
+    if cell:
+        add = st.session_state.db.cell(cell.row, cell.col + 1).value
     else:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -263,9 +245,7 @@ def on_change():
             temperature=0,
         )
         add = response.choices[0].message.content
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message).replace("'", "\"") + "', '" + add + "');")
-            s.commit()
+        st.session_state.db.append_row([str(message), add])
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
     st.session_state.assistant1.append({"role": "system", "content": answer})
@@ -285,18 +265,16 @@ def on_change():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if not (output.empty):
-        st.session_state.question = re.findall(r". (.*)", output)
+    cell = st.session_state.db.find(str(message))
+    if cell:
+        st.session_state.question = re.findall(r". (.*)", st.session_state.db.cell(cell.row, cell.col + 1).value)
     else:
         response = client.chat.completions.create(
             model="gpt-4",
             messages=message,
             temperature=0,
         )
-        with conn.session as s:
-            s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message).replace("'", "\"") + "', '" + response.choices[0].message.content + "');")
-            s.commit()
+        st.session_state.db.append_row([str(message), response.choices[0].message.content])
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.user_input = ""
 
