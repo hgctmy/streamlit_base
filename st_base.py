@@ -68,6 +68,7 @@ def first():
     if not (output.empty):
         a1message = output.item()
         st.markdown(a1message)
+        st.dataframe(output)
     else:
         completion1 = client.chat.completions.create(
             model="gpt-4",
