@@ -64,32 +64,46 @@ def first():
         {"role": "system", "content": "あなたは便利なアシスタントです．必要に応じて以下の文章を参照して簡潔に答えてください．\n\n###文章###\n" + st.session_state.exampletexts},
         {"role": "user", "content": "まずは文章の導入部分を1文で簡単に述べてください．"}
     ]
-    completion1 = client.chat.completions.create(
-        model="gpt-4",
-        messages=st.session_state.assistant1
-    )
-    a1message = completion1.choices[0].message.content
+    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    if output:
+        a1message = output
+    else:
+        completion1 = client.chat.completions.create(
+            model="gpt-4",
+            messages=st.session_state.assistant1,
+            temperature=0
+        )
+        a1message = completion1.choices[0].message.content
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + a1message + "');")
+        conn.commit()
 
     st.session_state.dialog.append("解説者：" + a1message)
 
     # 初めの質問候補を生成
     with open('prompt_qg.txt') as f:
         qgprompt = f.read()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": qgprompt
-            },
-            {
-                "role": "user",
-                "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
-            }
-        ],
-        temperature=0,
-    )
-    st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
+    message = [
+        {
+            "role": "system",
+            "content": qgprompt
+        },
+        {
+            "role": "user",
+            "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
+        }
+    ]
+    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    if output:
+        st.session_state.question = re.findall(r". (.*)", output)
+    else:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=message,
+            temperature=0,
+        )
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.commit()
+        st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.generated.append(a1message)
 
 
@@ -121,29 +135,47 @@ def click1(i):
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    completion = client.chat.completions.create(
-        model="gpt-4",
-        messages=st.session_state.assistant1
-    )
+    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    if output:
+        answer = output
+    else:
+        completion = client.chat.completions.create(
+            model="gpt-4",
+            messages=st.session_state.assistant1,
+            temperature=0
+        )
+        answer = completion.choices[0].message.content
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + answer + "');")
+        conn.commit()
+
+    st.session_state.dialog.append("解説者：" + answer)
     # 追加情報
     with open('prompt_add.txt') as f:
         addprompt = f.read()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": addprompt
-            },
-            {
-                "role": "user",
-                "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
-            }
-        ],
-        temperature=0,
-    )
-    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content)
-    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content)
+    message = [
+        {
+            "role": "system",
+            "content": addprompt
+        },
+        {
+            "role": "user",
+            "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
+        }
+    ]
+    outputadd = conn.query("select output from gpt4 where input = '" + message + "';")
+    if output:
+        add = outputadd
+    else:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=message,
+            temperature=0,
+        )
+        add = response.choices[0].message.content
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + add + "');")
+        conn.commit()
+    st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
+    st.session_state.generated.append(answer + add)
     st.session_state.past.append(st.session_state.question[i])
 
     if len(st.session_state.past) > 3:
@@ -151,21 +183,28 @@ def click1(i):
     # 質問生成
     with open('prompt_qg.txt') as f:
         qgprompt = f.read()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": qgprompt
-            },
-            {
-                "role": "user",
-                "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
-            }
-        ],
-        temperature=0,
-    )
-    st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
+    message = [
+        {
+            "role": "system",
+            "content": qgprompt
+        },
+        {
+            "role": "user",
+            "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
+        }
+    ]
+    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    if output:
+        st.session_state.question = re.findall(r". (.*)", output)
+    else:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=message,
+            temperature=0,
+        )
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.commit()
+        st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
 
 
 # 手入力質問されたとき
@@ -177,50 +216,75 @@ def on_change():
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    completion = client.chat.completions.create(
-        model="gpt-4",
-        messages=st.session_state.assistant1
-    )
+    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    if output:
+        answer = output
+    else:
+        completion = client.chat.completions.create(
+            model="gpt-4",
+            messages=st.session_state.assistant1,
+            temperature=0
+        )
+        answer = completion.choices[0].message.content
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + answer + "');")
+        conn.commit()
+
+    st.session_state.dialog.append("解説者：" + answer)
     # 追加情報
     with open('prompt_add.txt') as f:
         addprompt = f.read()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": addprompt
-            },
-            {
-                "role": "user",
-                "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
-            }
-        ],
-        temperature=0,
-    )
-    st.session_state.dialog.append("解説者：" + completion.choices[0].message.content + response.choices[0].message.content)
-    st.session_state.generated.append(completion.choices[0].message.content + response.choices[0].message.content)
-    st.session_state.past.append(st.session_state.question[i])
+    message = [
+        {
+            "role": "system",
+            "content": addprompt
+        },
+        {
+            "role": "user",
+            "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
+        }
+    ]
+    outputadd = conn.query("select output from gpt4 where input = '" + message + "';")
+    if output:
+        add = outputadd
+    else:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=message,
+            temperature=0,
+        )
+        add = response.choices[0].message.content
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + add + "');")
+        conn.commit()
+    st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
+    st.session_state.generated.append(answer + add)
+    st.session_state.past.append(user_input)
     if len(st.session_state.past) > 4:
         st.session_state.end = 1
     # 質問生成
     with open('prompt_qg.txt') as f:
         qgprompt = f.read()
-    response = client.chat.completions.create(
-        model="gpt-4",
-        messages=[
-            {
-                "role": "system",
-                "content": qgprompt
-            },
-            {
-                "role": "user",
-                "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
-            }
-        ],
-        temperature=0,
-    )
-    st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
+    message = [
+        {
+            "role": "system",
+            "content": qgprompt
+        },
+        {
+            "role": "user",
+            "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
+        }
+    ]
+    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    if output:
+        st.session_state.question = re.findall(r". (.*)", output)
+    else:
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=message,
+            temperature=0,
+        )
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.commit()
+        st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.user_input = ""
 
 
