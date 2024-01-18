@@ -65,7 +65,7 @@ def first():
         {"role": "user", "content": "まずは文章の導入部分を1文で簡単に述べてください．"}
     ]
     output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         a1message = output
     else:
         completion1 = client.chat.completions.create(
@@ -93,7 +93,7 @@ def first():
         }
     ]
     output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         st.session_state.question = re.findall(r". (.*)", output)
     else:
         response = client.chat.completions.create(
@@ -136,7 +136,7 @@ def click1(i):
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
     output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         answer = output
     else:
         completion = client.chat.completions.create(
@@ -163,7 +163,7 @@ def click1(i):
         }
     ]
     outputadd = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         add = outputadd
     else:
         response = client.chat.completions.create(
@@ -194,7 +194,7 @@ def click1(i):
         }
     ]
     output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         st.session_state.question = re.findall(r". (.*)", output)
     else:
         response = client.chat.completions.create(
@@ -217,7 +217,7 @@ def on_change():
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
     output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         answer = output
     else:
         completion = client.chat.completions.create(
@@ -244,7 +244,7 @@ def on_change():
         }
     ]
     outputadd = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         add = outputadd
     else:
         response = client.chat.completions.create(
@@ -274,7 +274,7 @@ def on_change():
         }
     ]
     output = conn.query("select output from gpt4 where input = '" + str(message).replace("'", "\"") + "';")
-    if output:
+    if not output.empty():
         st.session_state.question = re.findall(r". (.*)", output)
     else:
         response = client.chat.completions.create(
