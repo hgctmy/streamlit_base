@@ -67,6 +67,7 @@ def first():
     output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
     if not (output == None):
         a1message = output.item()
+        print(a1message)
     else:
         completion1 = client.chat.completions.create(
             model="gpt-4",
