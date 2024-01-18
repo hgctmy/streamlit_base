@@ -64,7 +64,7 @@ def first():
         {"role": "system", "content": "あなたは便利なアシスタントです．必要に応じて以下の文章を参照して簡潔に答えてください．\n\n###文章###\n" + st.session_state.exampletexts},
         {"role": "user", "content": "まずは文章の導入部分を1文で簡単に述べてください．"}
     ]
-    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1) + "';")
     if output:
         a1message = output
     else:
@@ -74,7 +74,7 @@ def first():
             temperature=0
         )
         a1message = completion1.choices[0].message.content
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + a1message + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1) + "', '" + a1message + "');")
         conn.commit()
 
     st.session_state.dialog.append("解説者：" + a1message)
@@ -92,7 +92,7 @@ def first():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(message) + "';")
     if output:
         st.session_state.question = re.findall(r". (.*)", output)
     else:
@@ -101,7 +101,7 @@ def first():
             messages=message,
             temperature=0,
         )
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message) + "', '" + response.choices[0].message.content + "');")
         conn.commit()
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.generated.append(a1message)
@@ -135,7 +135,7 @@ def click1(i):
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1) + "';")
     if output:
         answer = output
     else:
@@ -145,7 +145,7 @@ def click1(i):
             temperature=0
         )
         answer = completion.choices[0].message.content
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + answer + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1) + "', '" + answer + "');")
         conn.commit()
 
     st.session_state.dialog.append("解説者：" + answer)
@@ -162,7 +162,7 @@ def click1(i):
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    outputadd = conn.query("select output from gpt4 where input = '" + message + "';")
+    outputadd = conn.query("select output from gpt4 where input = '" + str(message) + "';")
     if output:
         add = outputadd
     else:
@@ -172,7 +172,7 @@ def click1(i):
             temperature=0,
         )
         add = response.choices[0].message.content
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + add + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message) + "', '" + add + "');")
         conn.commit()
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
@@ -193,7 +193,7 @@ def click1(i):
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(message) + "';")
     if output:
         st.session_state.question = re.findall(r". (.*)", output)
     else:
@@ -202,7 +202,7 @@ def click1(i):
             messages=message,
             temperature=0,
         )
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message) + "', '" + response.choices[0].message.content + "');")
         conn.commit()
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
 
@@ -216,7 +216,7 @@ def on_change():
     st.session_state.assistant1.append(choice)
     st.session_state.dialog.append("質問者：" + choice["content"])
     # 回答生成
-    output = conn.query("select output from gpt4 where input = '" + st.session_state.assistant1 + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1) + "';")
     if output:
         answer = output
     else:
@@ -226,7 +226,7 @@ def on_change():
             temperature=0
         )
         answer = completion.choices[0].message.content
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + st.session_state.assistant1 + "', '" + answer + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1) + "', '" + answer + "');")
         conn.commit()
 
     st.session_state.dialog.append("解説者：" + answer)
@@ -243,7 +243,7 @@ def on_change():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    outputadd = conn.query("select output from gpt4 where input = '" + message + "';")
+    outputadd = conn.query("select output from gpt4 where input = '" + str(message) + "';")
     if output:
         add = outputadd
     else:
@@ -253,7 +253,7 @@ def on_change():
             temperature=0,
         )
         add = response.choices[0].message.content
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + add + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message) + "', '" + add + "');")
         conn.commit()
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
@@ -273,7 +273,7 @@ def on_change():
             "content": "==入力==\n##ニュース記事##\n" + st.session_state.exampletexts + "\n\n##対話履歴##\n" + "\n".join(st.session_state.dialog) + "\n\n==出力=="
         }
     ]
-    output = conn.query("select output from gpt4 where input = '" + message + "';")
+    output = conn.query("select output from gpt4 where input = '" + str(message) + "';")
     if output:
         st.session_state.question = re.findall(r". (.*)", output)
     else:
@@ -282,7 +282,7 @@ def on_change():
             messages=message,
             temperature=0,
         )
-        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + message + "', '" + response.choices[0].message.content + "');")
+        conn.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(message) + "', '" + response.choices[0].message.content + "');")
         conn.commit()
         st.session_state.question = re.findall(r". (.*)", response.choices[0].message.content)
     st.session_state.user_input = ""
