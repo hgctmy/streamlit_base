@@ -65,7 +65,7 @@ def first():
         {"role": "user", "content": "まずは文章の導入部分を1文で簡単に述べてください．"}
     ]
     output = conn.query("select output from gpt4 where input = '" + str(st.session_state.assistant1).replace("'", "\"") + "';")
-    if not (output == None):
+    if not (output.empty):
         a1message = output.item()
         print(a1message)
     else:
