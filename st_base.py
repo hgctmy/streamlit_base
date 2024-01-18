@@ -14,7 +14,7 @@ scoped_credentials = credentials.with_scopes(['https://www.googleapis.com/auth/s
 gc = gspread.authorize(scoped_credentials)
 
 spreadsheet_url = "https://docs.google.com/spreadsheets/d/1jDCyIjlSXju3bXy-eF3go5xYmPTyhONTrrLJQVW2lvU/edit#gid=0"
-sh1 = gc.open_by_url(spreadsheet_url)
+
 
 client = OpenAI(
     api_key=st.secrets.OpenAIAPI.openai_api_key,
@@ -36,7 +36,7 @@ st.session_state.setdefault('end', False)
 st.session_state.setdefault('user_input', "")
 st.session_state.setdefault('worker', "")
 st.session_state.setdefault('workbook', None)
-st.session_state.setdefault('db', sh1.get_worksheet(0))
+st.session_state.setdefault('db', gc.open_by_url(spreadsheet_url).get_worksheet(0))
 
 
 st.title("ニュース解説対話型インタフェース1")
