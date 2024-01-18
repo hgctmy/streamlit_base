@@ -78,7 +78,7 @@ def first():
         with conn.session as s:
             s.execute("INSERT INTO gpt4 (input, output) VALUES ('" + str(st.session_state.assistant1).replace("'", "\"") + "', '" + a1message + "');")
             s.commit()
-
+    st.session_state.assistant1.append({"role": "system", "content": a1message})
     st.session_state.dialog.append("解説者：" + a1message)
 
     # 初めの質問候補を生成
@@ -181,6 +181,7 @@ def click1(i):
             s.commit()
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
+    st.session_state.assistant1.append({"role": "system", "content": answer})
     st.session_state.past.append(st.session_state.question[i])
 
     if len(st.session_state.past) > 3:
@@ -265,6 +266,7 @@ def on_change():
             s.commit()
     st.session_state.dialog[-1] = st.session_state.dialog[-1] + add
     st.session_state.generated.append(answer + add)
+    st.session_state.assistant1.append({"role": "system", "content": answer})
     st.session_state.past.append(user_input)
     if len(st.session_state.past) > 4:
         st.session_state.end = 1
